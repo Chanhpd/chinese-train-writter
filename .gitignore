@@ -1,1 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.local
+
+# Model files (large files)
+*.h5
+*.keras
+*.pb
+*.ckpt
+*.pth
+*.weights
+trained/
+
+# Dataset
+dataset_pairs/
 ./dataset_pair/
+
+# TensorFlow
+*.tfevents.*
+logs/
+tensorboard/
+
+# Cache
+.cache/
+*.log
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# OS
+Thumbs.db
+desktop.ini
