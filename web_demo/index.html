@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Demo - Chấm Điểm Chữ Hán</title>
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .char-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .char-btn {
+            padding: 15px 20px;
+            font-size: 24px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .char-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .char-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        #reference-canvas {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            background: white;
+            margin-bottom: 15px;
+        }
+
+        #user-canvas {
+            width: 300px !important;
+            height: 300px !important;
+            display: block;
+        }
+
+        #user-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        #user-guide {
+            width: 100%;
+            height: 100%;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #e53e3e;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+            font-size: 18px;
+            padding: 15px 40px;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .result-card {
+            grid-column: 1 / -1;
+            text-align: center;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        .result-card.show {
+            display: block;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .score-display {
+            font-size: 5em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .interpretation {
+            font-size: 2em;
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+
+        .distance-info {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #f56565;
+            background: #fff5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .score-display {
+                font-size: 3em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖌️ Web Demo - Chấm Điểm Chữ Hán</h1>
+
+        <div class="main-content">
+            <!-- Left: Reference Character -->
+            <div class="card">
+                <h2>📖 Chữ Mẫu</h2>
+                <div class="char-selector">
+                    <button class="char-btn active" data-char="好">好</button>
+                    <button class="char-btn" data-char="学">学</button>
+                    <button class="char-btn" data-char="中">中</button>
+                    <button class="char-btn" data-char="国">国</button>
+                    <button class="char-btn" data-char="人">人</button>
+                    <button class="char-btn" data-char="天">天</button>
+                    <button class="char-btn" data-char="水">水</button>
+                    <button class="char-btn" data-char="山">山</button>
+                </div>
+                <div id="reference-container">
+                    <svg id="reference-canvas"></svg>
+                </div>
+            </div>
+
+            <!-- Right: User Drawing -->
+            <div class="card">
+                <h2>✍️ Bạn Viết</h2>
+                <div id="user-container" style="position: relative;">
+                    <canvas id="user-canvas" width="300" height="300" style="border: 3px solid #667eea; border-radius: 10px; background: white; cursor: crosshair; display: block;"></canvas>
+                    <svg id="user-guide" style="position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0.3;"></svg>
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary" id="clear-btn">🗑️ Xóa</button>
+                    <button class="btn-primary" id="hint-btn">💡 Gợi Ý</button>
+                </div>
+            </div>
+
+            <!-- Result -->
+            <div class="result-card" id="result-card">
+                <h2>📊 Kết Quả Chấm Điểm</h2>
+                <div class="score-display" id="score-display">--</div>
+                <div class="interpretation" id="interpretation">--</div>
+                <div class="distance-info">
+                    Distance: <span id="distance-value">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn-success" id="submit-btn">🎯 CHẤM ĐIỂM</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Đang xử lý...</p>
+        </div>
+
+        <div class="error" id="error-message"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let currentChar = '好';
+        let referenceWriter, guideWriter;
+        let isDrawing = false;
+        let userCanvas, userCtx;
+
+        // Initialize Hanzi Writers
+        function initWriters() {
+            // Reference (read-only)
+            referenceWriter = HanziWriter.create('reference-canvas', currentChar, {
+                width: 300,
+                height: 300,
+                padding: 20,
+                showOutline: true,
+                strokeAnimationSpeed: 1,
+                delayBetweenStrokes: 200
+            });
+
+            // Guide overlay (outline only)
+            guideWriter = HanziWriter.create('user-guide', currentChar, {
+                width: 300,
+                height: 300,
+                padding: 20,
+                showOutline: true,
+                showCharacter: false
+            });
+
+            // User drawing canvas
+            userCanvas = document.getElementById('user-canvas');
+            userCtx = userCanvas.getContext('2d');
+            userCtx.strokeStyle = '#333';
+            userCtx.lineWidth = 1;  // Reduced from 8 to match training data
+            userCtx.lineCap = 'round';
+            userCtx.lineJoin = 'round';
+
+            // Clear canvas
+            clearUserCanvas();
+
+            // Animate reference
+            referenceWriter.animateCharacter();
+
+            // Setup drawing events
+            setupDrawing();
+        }
+
+        function clearUserCanvas() {
+            userCtx.fillStyle = 'white';
+            userCtx.fillRect(0, 0, userCanvas.width, userCanvas.height);
+        }
+
+        function setupDrawing() {
+            let lastX = 0, lastY = 0;
+
+            function getCoordinates(e, canvas) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                if (e.touches) {
+                    return {
+                        x: (e.touches[0].clientX - rect.left) * scaleX,
+                        y: (e.touches[0].clientY - rect.top) * scaleY
+                    };
+                } else {
+                    return {
+                        x: (e.clientX - rect.left) * scaleX,
+                        y: (e.clientY - rect.top) * scaleY
+                    };
+                }
+            }
+
+            // Mouse events
+            userCanvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const coords = getCoordinates(e, userCanvas);
+                lastX = coords.x;
+                lastY = coords.y;
+            });
+
+            userCanvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                const coords = getCoordinates(e, userCanvas);
+                
+                userCtx.beginPath();
+                userCtx.moveTo(lastX, lastY);
+                userCtx.lineTo(coords.x, coords.y);
+                userCtx.stroke();
+                
+                lastX = coords.x;
+                lastY = coords.y;
+            });
+
+            userCanvas.addEventListener('mouseup', () => {
+                isDrawing = false;
+            });
+
+            userCanvas.addEventListener('mouseleave', () => {
+                isDrawing = false;
+            });
+
+            // Touch events
+            userCanvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                isDrawing = true;
+                const coords = getCoordinates(e, userCanvas);
+                lastX = coords.x;
+                lastY = coords.y;
+            });
+
+            userCanvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!isDrawing) return;
+                const coords = getCoordinates(e, userCanvas);
+                
+                userCtx.beginPath();
+                userCtx.moveTo(lastX, lastY);
+                userCtx.lineTo(coords.x, coords.y);
+                userCtx.stroke();
+                
+                lastX = coords.x;
+                lastY = coords.y;
+            });
+
+            userCanvas.addEventListener('touchend', () => {
+                isDrawing = false;
+            });
+        }
+
+        // Character selector
+        document.querySelectorAll('.char-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active state
+                document.querySelectorAll('.char-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update character
+                currentChar = btn.dataset.char;
+
+                // Recreate writers
+                document.getElementById('reference-canvas').innerHTML = '';
+                document.getElementById('user-guide').innerHTML = '';
+                initWriters();
+
+                // Hide result
+                document.getElementById('result-card').classList.remove('show');
+            });
+        });
+
+        // Clear button
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            clearUserCanvas();
+        });
+
+        // Hint button
+        document.getElementById('hint-btn').addEventListener('click', () => {
+            referenceWriter.animateCharacter();
+        });
+
+        // Submit button
+        document.getElementById('submit-btn').addEventListener('click', async () => {
+            try {
+                // Get reference canvas
+                const refCanvas = document.querySelector('#reference-canvas');
+                const refImage = await svgToBase64(refCanvas);
+                
+                // Get user canvas (already a canvas)
+                const userImage = userCanvas.toDataURL('image/png');
+
+                // Show loading
+                document.getElementById('loading').classList.add('show');
+                document.getElementById('error-message').classList.remove('show');
+                document.getElementById('result-card').classList.remove('show');
+
+                // Call API
+                const response = await fetch(`${API_URL}/score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_reference: refImage,
+                        image_user: userImage
+                    })
+                });
+
+                const data = await response.json();
+
+                // Hide loading
+                document.getElementById('loading').classList.remove('show');
+
+                if (data.success) {
+                    // Show result
+                    document.getElementById('score-display').textContent = data.score.toFixed(1);
+                    document.getElementById('interpretation').textContent = data.interpretation;
+                    document.getElementById('distance-value').textContent = data.distance.toFixed(4);
+                    document.getElementById('result-card').classList.add('show');
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                document.getElementById('loading').classList.remove('show');
+                const errorMsg = document.getElementById('error-message');
+                errorMsg.textContent = `❌ Lỗi: ${error.message}. Đảm bảo API server đang chạy!`;
+                errorMsg.classList.add('show');
+            }
+        });
+
+        // Convert SVG to base64 image
+        async function svgToBase64(svgElement) {
+            return new Promise((resolve) => {
+                const svgData = new XMLSerializer().serializeToString(svgElement);
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 300;
+                const ctx = canvas.getContext('2d');
+
+                const img = new Image();
+                img.onload = () => {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, 300, 300);
+                    ctx.drawImage(img, 0, 0);
+                    const base64 = canvas.toDataURL('image/png');
+                    resolve(base64);
+                };
+                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+            });
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initWriters();
+        });
+    </script>
+</body>
+</html>

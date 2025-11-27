@@ -32,8 +32,8 @@ IMG_DIR = os.path.join(DATASET_DIR, "images")
 CSV_FILE = os.path.join(DATASET_DIR, "pairs.csv")
 IMG_SIZE = 128
 BATCH_SIZE = 32
-EPOCHS = 20
-LEARNING_RATE = 0.0001
+EPOCHS = 30  # Tăng từ 20 lên 30
+LEARNING_RATE = 0.0005  # Tăng từ 0.0001 để học nhanh hơn ban đầu
 
 # ========================================
 # 1. LOAD DATASET
@@ -116,26 +116,37 @@ def contrastive_loss(y_true, y_pred, margin=1.0):
     return K.mean(y_true * square_pred + (1 - y_true) * margin_square)
 
 def create_base_network(input_shape):
-    """Base CNN for feature extraction"""
+    """Base CNN for feature extraction - Improved architecture"""
     input_layer = Input(shape=input_shape)
     
-    # Convolutional layers
+    # Convolutional layers with batch normalization
     x = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(input_layer)
+    x = layers.BatchNormalization()(x)
     x = layers.MaxPooling2D((2, 2))(x)
     x = layers.Dropout(0.2)(x)
     
     x = layers.Conv2D(64, (3, 3), activation='relu', padding='same')(x)
+    x = layers.BatchNormalization()(x)
     x = layers.MaxPooling2D((2, 2))(x)
     x = layers.Dropout(0.2)(x)
     
     x = layers.Conv2D(128, (3, 3), activation='relu', padding='same')(x)
+    x = layers.BatchNormalization()(x)
     x = layers.MaxPooling2D((2, 2))(x)
-    x = layers.Dropout(0.2)(x)
+    x = layers.Dropout(0.3)(x)
+    
+    x = layers.Conv2D(256, (3, 3), activation='relu', padding='same')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+    x = layers.Dropout(0.3)(x)
     
     # Flatten and dense layers
     x = layers.Flatten()(x)
+    x = layers.Dense(512, activation='relu')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Dropout(0.4)(x)
     x = layers.Dense(256, activation='relu')(x)
-    x = layers.Dropout(0.3)(x)
+    x = layers.Dropout(0.4)(x)
     x = layers.Dense(128, activation=None)(x)  # Embedding vector (128-dim)
     
     return Model(input_layer, x, name='base_network')
@@ -187,7 +198,7 @@ checkpoint_cb = keras.callbacks.ModelCheckpoint(
 
 early_stop_cb = keras.callbacks.EarlyStopping(
     monitor='val_loss',
-    patience=5,
+    patience=7,  # Tăng từ 5 lên 7
     restore_best_weights=True,
     verbose=1
 )
@@ -195,7 +206,7 @@ early_stop_cb = keras.callbacks.EarlyStopping(
 reduce_lr_cb = keras.callbacks.ReduceLROnPlateau(
     monitor='val_loss',
     factor=0.5,
-    patience=3,
+    patience=4,  # Tăng từ 3 lên 4
     min_lr=1e-7,
     verbose=1
 )
