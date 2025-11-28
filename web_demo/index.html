@@ -317,7 +317,9 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:5000';
+        // Auto-detect API URL (same origin when deployed together)
+        const API_URL = window.location.origin;
+        
         let currentChar = '好';
         let referenceWriter, guideWriter;
         let isDrawing = false;

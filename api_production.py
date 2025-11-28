@@ -1,5 +1,5 @@
 # Flask API Production - Handwriting Scoring System
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import tensorflow as tf
 from tensorflow import keras
@@ -93,6 +93,7 @@ def home():
         'model_loaded': model is not None,
         'endpoints': {
             'GET /': 'API documentation',
+            'GET /demo': 'Web demo interface',
             'GET /health': 'Health check',
             'POST /score': 'Score handwriting comparison',
             'POST /batch_score': 'Score multiple characters at once'
@@ -115,6 +116,11 @@ def home():
             }
         }
     })
+
+@app.route('/demo')
+def demo():
+    """Serve web demo"""
+    return send_from_directory('web_demo', 'index.html')
 
 @app.route('/health')
 def health():
