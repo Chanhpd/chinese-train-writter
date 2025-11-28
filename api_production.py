@@ -12,13 +12,6 @@ import os
 import logging
 from datetime import datetime
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-app = Flask(__name__)
-CORS(app)  # Allow Flutter app to call API
-
 # Define custom functions for model loading
 def euclidean_distance(vects):
     x, y = vects
@@ -30,22 +23,50 @@ def contrastive_loss(y_true, y_pred, margin=1.0):
     margin_square = K.square(K.maximum(margin - y_pred, 0))
     return K.mean(y_true * square_pred + (1 - y_true) * margin_square)
 
-# Load model
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+CORS(app)  # Allow Flutter app to call API
+
+# Model path
 MODEL_PATH = "trained/siamese_model_full.h5"
-logger.info(f"Loading model from {MODEL_PATH}...")
-try:
-    model = keras.models.load_model(
-        MODEL_PATH, 
-        custom_objects={
-            'euclidean_distance': euclidean_distance,
-            'contrastive_loss': contrastive_loss
-        },
-        compile=False
-    )
-    logger.info("✅ Model loaded successfully!")
-except Exception as e:
-    logger.error(f"❌ Failed to load model: {str(e)}")
-    model = None
+
+# Global model variable (lazy-loaded)
+_model = None
+_model_lock = None
+
+def get_model():
+    """Lazy load model on first request"""
+    global _model, _model_lock
+    
+    if _model is None:
+        # Import threading here to avoid issues
+        import threading
+        if _model_lock is None:
+            _model_lock = threading.Lock()
+        
+        with _model_lock:
+            # Double-check locking pattern
+            if _model is None:
+                logger.info(f"🔄 Loading model from {MODEL_PATH}...")
+                try:
+                    _model = keras.models.load_model(
+                        MODEL_PATH, 
+                        custom_objects={
+                            'euclidean_distance': euclidean_distance,
+                            'contrastive_loss': contrastive_loss
+                        },
+                        compile=False
+                    )
+                    logger.info("✅ Model loaded successfully!")
+                except Exception as e:
+                    logger.error(f"❌ Failed to load model: {str(e)}")
+                    raise
+    
+    return _model
+    return _model
 
 IMG_SIZE = 128
 
@@ -86,11 +107,12 @@ def preprocess_image(image_data):
 @app.route('/')
 def home():
     """API documentation"""
+    model_loaded = _model is not None
     return jsonify({
         'name': 'Handwriting Scoring API',
         'version': '1.0.0',
         'status': 'online',
-        'model_loaded': model is not None,
+        'model_loaded': model_loaded,
         'endpoints': {
             'GET /': 'API documentation',
             'GET /demo': 'Web demo interface',
@@ -125,9 +147,10 @@ def demo():
 @app.route('/health')
 def health():
     """Health check endpoint"""
+    model_loaded = _model is not None
     return jsonify({
         'status': 'healthy',
-        'model_loaded': model is not None,
+        'model_loaded': model_loaded,
         'timestamp': datetime.now().isoformat()
     })
 
@@ -154,7 +177,9 @@ def score_handwriting():
     }
     """
     try:
-        # Check model
+        # Get model (lazy load on first call)
+        model = get_model()
+        
         if model is None:
             return jsonify({
                 'success': False,
@@ -281,6 +306,9 @@ def batch_score():
     }
     """
     try:
+        # Get model (lazy load on first call)
+        model = get_model()
+        
         if model is None:
             return jsonify({
                 'success': False,
@@ -377,10 +405,11 @@ if __name__ == '__main__':
     print("🚀 Handwriting Scoring API - Production")
     print("="*60)
     print(f"Model: {MODEL_PATH}")
-    print(f"Status: {'✅ Ready' if model else '❌ Model not loaded'}")
+    print(f"Model will be loaded on first request (lazy loading)")
     print(f"Server: http://0.0.0.0:5000")
     print("\nEndpoints:")
     print("  - GET  /          : API documentation")
+    print("  - GET  /demo      : Web demo interface")
     print("  - GET  /health    : Health check")
     print("  - POST /score     : Score single character")
     print("  - POST /batch_score : Score multiple characters")
